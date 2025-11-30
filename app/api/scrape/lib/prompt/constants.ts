@@ -1,0 +1,4 @@
+export const MAX_CSS_VARIABLES_DISPLAY = 20;
+
+export const DATA_SUMMARY_PLACEHOLDER = '{{DATA_SUMMARY}}';
+

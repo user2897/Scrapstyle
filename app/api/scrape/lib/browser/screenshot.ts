@@ -1,4 +1,4 @@
-import { Page } from 'puppeteer';
+import { Page } from 'puppeteer-core';
 import { ScreenshotData } from '../types';
 import { TIMEOUTS, SCROLL_AMOUNT, SCREENSHOT_QUALITY, VIEWPORT } from './constants';
 

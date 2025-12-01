@@ -54,6 +54,8 @@ npm install
 npm run dev
 ```
 
+> **Note:** Requires Chrome, Edge, Brave, or Chromium installed locally. Safari is not supported by Puppeteer.
+
 ---
 
 ## 🛠️ Tech Stack

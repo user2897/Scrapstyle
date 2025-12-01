@@ -1,4 +1,4 @@
-import { Page } from 'puppeteer';
+import { Page } from 'puppeteer-core';
 import { ExtractedData } from '../types';
 import { EXTRACTION_LIMITS } from './constants';
 

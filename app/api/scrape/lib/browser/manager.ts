@@ -1,15 +1,76 @@
-import puppeteer, { Browser } from 'puppeteer';
-import { BROWSER_ARGS } from './constants';
+import puppeteerCore, { Browser } from "puppeteer-core";
+import chromium from "@sparticuz/chromium";
+import { existsSync } from "fs";
 
 let browserInstance: Browser | null = null;
 
-export async function getBrowser(): Promise<Browser> {
-  if (!browserInstance || !browserInstance.connected) {
-    browserInstance = await puppeteer.launch({
-      headless: true,
-      args: [...BROWSER_ARGS],
-    });
+const isDev = process.env.NODE_ENV === "development";
+
+const CHROME_PATHS = {
+  darwin: [
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary",
+    "/Applications/Chromium.app/Contents/MacOS/Chromium",
+    "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+    "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
+  ],
+  win32: [
+    "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+    "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+    "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe",
+    "C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe",
+  ],
+  linux: [
+    "/usr/bin/google-chrome",
+    "/usr/bin/google-chrome-stable",
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+    "/snap/bin/chromium",
+    "/usr/bin/brave-browser",
+  ],
+};
+
+function findLocalBrowser(): string | null {
+  const platform = process.platform as keyof typeof CHROME_PATHS;
+  const paths = CHROME_PATHS[platform] || CHROME_PATHS.linux;
+
+  for (const browserPath of paths) {
+    if (existsSync(browserPath)) {
+      return browserPath;
+    }
   }
+  return null;
+}
+
+async function getExecutablePath(): Promise<string> {
+  if (process.env.CHROME_PATH) {
+    return process.env.CHROME_PATH;
+  }
+
+  if (isDev) {
+    const localBrowser = findLocalBrowser();
+    if (localBrowser) {
+      return localBrowser;
+    }
+    console.warn("No local Chromium-based browser found. Using @sparticuz/chromium (slower startup).");
+  }
+
+  return await chromium.executablePath();
+}
+
+export async function getBrowser(): Promise<Browser> {
+  if (browserInstance && browserInstance.connected) {
+    return browserInstance;
+  }
+
+  const executablePath = await getExecutablePath();
+
+  browserInstance = await puppeteerCore.launch({
+    args: isDev && !process.env.CHROME_PATH ? [] : chromium.args,
+    executablePath,
+    headless: true,
+  });
+
   return browserInstance;
 }
 

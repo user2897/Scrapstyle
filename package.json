@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
-    "@sparticuz/chromium": "^141.0.0",
+    "@sparticuz/chromium-min": "^141.0.0",
     "@stripe/stripe-js": "^8.5.3",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.86.0",

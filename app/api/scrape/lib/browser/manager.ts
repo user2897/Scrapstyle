@@ -1,10 +1,13 @@
 import puppeteerCore, { Browser } from "puppeteer-core";
-import chromium from "@sparticuz/chromium";
+import chromium from "@sparticuz/chromium-min";
 import { existsSync } from "fs";
 
 let browserInstance: Browser | null = null;
 
 const isDev = process.env.NODE_ENV === "development";
+
+const CHROMIUM_URL =
+  "https://github.com/AuliaSab/chromium/raw/main/chromium-v131.0.1-pack.tar";
 
 const CHROME_PATHS = {
   darwin: [
@@ -52,10 +55,9 @@ async function getExecutablePath(): Promise<string> {
     if (localBrowser) {
       return localBrowser;
     }
-    console.warn("No local Chromium-based browser found. Using @sparticuz/chromium (slower startup).");
   }
 
-  return await chromium.executablePath();
+  return await chromium.executablePath(CHROMIUM_URL);
 }
 
 export async function getBrowser(): Promise<Browser> {
@@ -64,9 +66,10 @@ export async function getBrowser(): Promise<Browser> {
   }
 
   const executablePath = await getExecutablePath();
+  const isLocal = isDev && findLocalBrowser();
 
   browserInstance = await puppeteerCore.launch({
-    args: isDev && !process.env.CHROME_PATH ? [] : chromium.args,
+    args: isLocal ? [] : chromium.args,
     executablePath,
     headless: true,
   });

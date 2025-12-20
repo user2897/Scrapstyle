@@ -4,6 +4,7 @@ import { scrapeWithBrowser } from './lib/browser';
 import { buildDataSummary, buildVisionPrompt, getInstructions } from './lib/prompt';
 import { cleanAIOutput, removeBrandNames } from './lib/utils';
 import { DEFAULT_MODELS, DEFAULT_PROVIDER, type AIProvider } from '@/app/lib/constants';
+import { ApiError, classifyGeminiError, classifyOpenRouterError } from './lib/errors';
 import type { ScreenshotData } from './lib/types';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
@@ -59,10 +60,11 @@ async function generateWithOpenRouter(prompt: string, screenshots: ScreenshotDat
     }),
   });
 
-  if (resp.status === 401) throw new Error('Invalid API key');
   if (!resp.ok) {
-    const detail = await resp.text();
-    throw new Error(`OpenRouter error (${resp.status}): ${detail}`);
+    const body = await resp.text();
+    const retryAfterHeader = resp.headers.get('Retry-After');
+    const classified = classifyOpenRouterError(resp.status, body, retryAfterHeader);
+    throw new ApiError(classified);
   }
 
   const data = await resp.json();
@@ -90,17 +92,17 @@ export async function POST(req: NextRequest) {
     }: { url: string; apiKey: string; provider?: AIProvider; model?: string } = await req.json();
 
     if (!url) {
-      return NextResponse.json({ error: 'URL is required' }, { status: 400 });
+      return NextResponse.json({ error: 'URL is required', code: 'UNKNOWN' }, { status: 400 });
     }
 
     if (!apiKey) {
-      return NextResponse.json({ error: 'API key is required' }, { status: 401 });
+      return NextResponse.json({ error: 'API key is required', code: 'INVALID_KEY' }, { status: 401 });
     }
 
     try {
       new URL(url);
     } catch {
-      return NextResponse.json({ error: 'Invalid URL' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid URL', code: 'UNKNOWN' }, { status: 400 });
     }
 
     const scrapeResult = await scrapeWithBrowser(url);
@@ -112,7 +114,19 @@ export async function POST(req: NextRequest) {
     if (provider === 'openrouter') {
       aiText = await generateWithOpenRouter(prompt, scrapeResult.screenshots, apiKey, model);
     } else {
-      aiText = await generateWithGemini(prompt, scrapeResult.screenshots, apiKey, model);
+      try {
+        aiText = await generateWithGemini(prompt, scrapeResult.screenshots, apiKey, model);
+      } catch (geminiError) {
+        const classified = classifyGeminiError(geminiError);
+        const headers: HeadersInit = {};
+        if (classified.retryAfter) {
+          headers['Retry-After'] = String(classified.retryAfter);
+        }
+        return NextResponse.json(
+          { error: classified.message, code: classified.code },
+          { status: classified.status, headers }
+        );
+      }
     }
 
     let generatedGuide = cleanAIOutput(aiText);
@@ -132,8 +146,21 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error('Scrape error:', error);
+
+    // Handle ApiError (from OpenRouter)
+    if (error instanceof ApiError) {
+      const headers: HeadersInit = {};
+      if (error.retryAfter) {
+        headers['Retry-After'] = String(error.retryAfter);
+      }
+      return NextResponse.json(
+        { error: error.message, code: error.code },
+        { status: error.status, headers }
+      );
+    }
+
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Internal Server Error' },
+      { error: error instanceof Error ? error.message : 'Internal Server Error', code: 'UNKNOWN' },
       { status: 500 }
     );
   }

@@ -1,5 +1,7 @@
 import type { AIProvider } from "./constants";
 
+export type ErrorCode = 'QUOTA_EXCEEDED' | 'RATE_LIMITED' | 'INVALID_KEY' | 'UNKNOWN';
+
 export interface ScrapeRequest {
   url: string;
   apiKey: string;
@@ -16,8 +18,14 @@ export interface ScrapeResponse {
   };
 }
 
-export interface ApiError {
+export interface ApiErrorResponse {
   error: string;
+  code?: ErrorCode;
+}
+
+export interface ScrapeError extends Error {
+  status: number;
+  code?: ErrorCode;
 }
 
 export async function scrapeUrl(request: ScrapeRequest): Promise<ScrapeResponse> {
@@ -30,8 +38,9 @@ export async function scrapeUrl(request: ScrapeRequest): Promise<ScrapeResponse>
   const data = await response.json();
 
   if (!response.ok) {
-    const error = new Error(data.error || "Failed to generate style guide");
-    (error as Error & { status: number }).status = response.status;
+    const error = new Error(data.error || "Failed to generate style guide") as ScrapeError;
+    error.status = response.status;
+    error.code = data.code;
     throw error;
   }
 
@@ -44,4 +53,3 @@ export function cleanMarkdown(markdown: string): string {
     .replace(/\n?```\s*$/i, "")
     .trim();
 }
-

